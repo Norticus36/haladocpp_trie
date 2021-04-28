@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <set>
 
 /** http://enwp.org/Trie
  *  --------------------
@@ -22,18 +23,22 @@ in the key.
 
 */
 
-template <class T, class Compare = std::less<std::string>, class Allocator = std::allocator<std::pair<const std::string, T> >
+template <class T, class Compare = std::less<std::string>, class Allocator = std::allocator<std::pair<const std::string, T> > >
 class stupid_trie {
+    public:
     typedef std::string key_type;
     typedef T mapped_type;
     typedef std::pair<const std::string, T> value_type;
     typedef Compare key_compare;
     typedef Allocator allocator_type;
+    //todo is this circular typedef??
     typedef std::set<node_type, key_compare, allocator_type> children_type;
     typedef std::pair<value_type, children_type> node_type;
 
+    private:
     node_type head;
     
+    public:
     template <class T>
     class trie_iterator {
         //note: iterator is deprecated from c++17??
