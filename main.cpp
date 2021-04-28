@@ -22,6 +22,57 @@ in the key.
 
 */
 
+template <class T, class Compare = std::less<std::string>, class Allocator = std::allocator<std::pair<const std::string, T> >
+class stupid_trie {
+    typedef std::string key_type;
+    typedef T mapped_type;
+    typedef std::pair<const std::string, T> value_type;
+    typedef Compare key_compare;
+    typedef Allocator allocator_type;
+    typedef std::set<node_type, key_compare, allocator_type> children_type;
+    typedef std::pair<value_type, children_type> node_type;
+
+    node_type head;
+    
+    template <class T>
+    class trie_iterator {
+        //note: iterator is deprecated from c++17??
+        using iterator_category = std::bidirectional_iterator:
+
+        //iterate through the child elements, if their children aren't empty, recursively iterate through them?
+
+        //begin should be the first valid element found, if empty then the head element
+
+        //end should be the head element
+
+    };
+
+    stupid_trie(){ head.first.first = ""; head.first.second = optional(); head.second = children_type();}
+
+    ~stupid_trie() = default;
+
+//TODO count fnc - can the key be found?
+    int count(key_type){}
+//TODO implement size fnc (count the values, not the keys) -also iterator?
+    int size(){}
+//TODO is_empty fnc, 0 == size
+    bool is_empty(){return (0 == size())}
+/*TODO emplace fnc, return a pair, first is a (string, iterator(to the value)) pair, 2nd is a bool if it already existed
+also don't insert into const
+keep inserting by substring into the child element container, if there's a node already then skip that insert
+but keep inserting on that node
+
+*/
+    std::pair<value_type, bool> emplace(key_type, T){}
+//TODO at FNC, throw out_of_range if its not there
+    T& at(const key_type&){
+
+        //if unreachable
+        throw std::out_of_range;
+    }
+//TODO do we have to delete an element? maybe invalidate nodes which don't have a value? (aka optional values)
+};
+
 // Extra challenge: implement your own optional!
 template <typename T>
 using optional = std::optional<T>;
