@@ -88,11 +88,7 @@ class stupid_trie {
     //end should be the head element
     trie_iterator end() {return &head;}
 
-    stupid_trie(){ 
-      head.value = std::make_pair<key_type, T>("", T()); 
-      head.children = children_container_type(); 
-      head.parent = nullptr;
-      }
+    stupid_trie() = default;
 
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
@@ -168,10 +164,10 @@ x
   static_assert(std::is_same_v<decltype(STI)::mapped_type, int>);
   static_assert(std::is_same_v<decltype(STI)::value_type,
                                std::pair<const std::string, int>>);
-
-  /*assert(STI.empty() && STI.size() == 0 && STI.count("whispy") == 0);
+  /*
+  assert(STI.empty() && STI.size() == 0 && STI.count("whispy") == 0);
   STI.count(static_cast<void*>(0)); // !!! Should not compile.
-
+  
   const decltype(STI)& cSTI = STI;
   // Callable on const.
   assert(STI.empty() && cSTI.size() == 0 && cSTI.count("whispy") == 0);
@@ -330,6 +326,7 @@ int generic() {
   //
   // Other predicatesd and functors might also be needed, feel free to
   // experiment!
+  /*
   const auto& CharToStringConcat = [](std::string& Seq, char C)
       -> std::string& {
     Seq.push_back(C);
@@ -362,7 +359,7 @@ int generic() {
                                std::allocator>;
   static_assert(std::is_same_v<default_template_parameters, fully_specified>);
 
-
+  */
   // The internal representation of the nodes should be something like this:
   /*
 
@@ -382,7 +379,7 @@ x
 │  │  │  ├─ x -> 1337
 
   */
-
+  /*
   // The interface for the generic trie shall be roughly the same as the stupid
   // one's. It is only the representation that is different, emphasising cache
   // locality and smaller memory footprint.
@@ -481,7 +478,7 @@ x
   Result.pop_back();
   Expected = "(abel->16),(gs->-24),(gsd->43),(whispy->69),(xazax->1337)";
   assert(Result == Expected);
-
+  */
   return 1;
 }
 
