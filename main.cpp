@@ -29,60 +29,67 @@ class stupid_trie {
     public:
     typedef std::string key_type;
     typedef T mapped_type;
-    typedef std::pair<const std::string, std::optional<T> > value_type;
+    typedef std::pair<const std::string, T> value_type;
+    //typedef std::pair<const std::string, std::optional<T> > value_type;
     typedef Compare key_compare;
     typedef Allocator allocator_type;
-    //todo is this circular typedef??
-    typedef std::set<node_type*, key_compare, allocator_type> children_type;
-    typedef node_type* parent_type;
-    typedef std::tuple<value_type, children_type, parent_type> node_type;
+
+    struct trie_node{
+      value_type value;
+      trie_node* parent;
+      std::set<trie_node*, key_compare, allocator_type> children;
+    };
 
     private:
-    node_type head;
+    trie_node head;
     
     public:
 
     class trie_iterator : public std::iterator<std::bidirectional_iterator_tag, value_type> {
         //note: iterator is deprecated from c++17??
 
-      node_type* curr;
+      trie_node* curr;
       public:
-      explicit trie_iterator(node_type* _elem) : curr(_elem) {}
+      explicit trie_iterator(trie_node* _elem) : curr(_elem) {}
         //iterate through the child elements, if their children aren't empty, recursively iterate through them?
-      node_type* operator++()
+      trie_node* operator++()
       {
-          if ((std::get<1>(*curr)).is_empty()){ return (std::get<2>(*curr))++;} //TODO continue iterating in the parent from this set element
-          auto it = (std::get<1>(*curr)).begin();
-          while (it != (std::get<1>(*curr)).end() && (nullptr == first_valid(it)))
+          if (curr->children.is_empty()){ return (curr->parent)++;} //TODO continue iterating in the parent from this set element
+          auto it = curr->children.begin();
+          while (it != curr->children.end() && (nullptr == first_valid(it)))
           {
             ++it;
           }
-          return (it == (std::get<1>(*curr)).end()) ? (std::get<2>(*curr))++ : it; //TODO continue iterating in the parent from the current element
+          return (it == curr->children.end()) ? (curr->parent)++ : it; //TODO continue iterating in the parent from the current element
       }
 
       //TODO operator--
-      bool operator==(iterator other) const {return std::get<0>(*curr).first == std::get<0>(*(other.curr)).first}
-      bool operator!=(iterator other) const {return !(*this == other);}
+      bool operator==(trie_iterator other) const {return curr->value.first == other->curr->value.first;}
+      bool operator!=(trie_iterator other) const {return !(*this == other);}
     };
 
     //begin should be the first valid element found, if empty then the head element
     trie_iterator begin() {
-      if ((std::get<1>(head)).is_empty() ) {return &head;}
-      node_type* ret = first_valid(&head);
+      if (head.children.is_empty() ) {return &head;}
+      trie_node* ret = first_valid(&head);
       return (nullptr == ret) ? &head : ret;
     }
-    node_type* first_valid(node_type* node) {
-      if (((std::get<1>(*node))).is_empty()){
-        return (std::get<0>(*node).second.has_value()) ? node : nullptr;
+    trie_node* first_valid(trie_node* node) {
+      if (node->children.is_empty()){
+        return (node->value.second.has_value()) ? node : nullptr;
       }
-      auto it = std::get<1>(*node).begin();
-      while (it != std::get<1>(*node).end() && (nullptr == first_valid(it)) ){++it;}
-      return (std::get<1>(*node).end() == it) ? nullptr : it;
+      auto it = node->children.begin();
+      while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
+      return (node->children.end() == it) ? nullptr : it;
     }
     //end should be the head element
     trie_iterator end() {return &head;}
 
-    stupid_trie(){ std::get<0>(head).first = ""; std::get<0>(head).second = optional(); std::get<1>(head) = children_type(); std::get<2>(head) = nullptr;}
+    stupid_trie(){ 
+      head.value = std::make_tuple<key_type, T>("", std::nullopt); 
+      head.children = children_type(); 
+      head.parent = nullptr;
+      }
 
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
