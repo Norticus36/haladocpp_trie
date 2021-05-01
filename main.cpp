@@ -111,7 +111,7 @@ class stupid_trie {
       return ret;
     }
 //TODO is_empty fnc, 0 == size
-    bool is_empty() const {return (0 == size());}
+    bool empty() const {return (0 == size());}
 /*TODO emplace fnc, return a pair, first is a (string, iterator(to the value)) pair, 2nd is a bool if it already existed
 also don't insert into const
 keep inserting by substring into the child element container, if there's a node already then skip that insert
@@ -164,10 +164,10 @@ x
   static_assert(std::is_same_v<decltype(STI)::mapped_type, int>);
   static_assert(std::is_same_v<decltype(STI)::value_type,
                                std::pair<const std::string, int>>);
-  /*
+  
   assert(STI.empty() && STI.size() == 0 && STI.count("whispy") == 0);
   STI.count(static_cast<void*>(0)); // !!! Should not compile.
-  
+  /*
   const decltype(STI)& cSTI = STI;
   // Callable on const.
   assert(STI.empty() && cSTI.size() == 0 && cSTI.count("whispy") == 0);
