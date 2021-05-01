@@ -33,11 +33,14 @@ class stupid_trie {
     //typedef std::pair<const std::string, std::optional<T> > value_type;
     typedef Compare key_compare;
     typedef Allocator allocator_type;
+    struct trie_node;
+
+    typedef std::set<trie_node*, key_compare> children_container_type;
 
     struct trie_node{
       value_type value;
       trie_node* parent;
-      std::set<trie_node*, key_compare, allocator_type> children;
+      children_container_type children;
     };
 
     private:
@@ -86,8 +89,8 @@ class stupid_trie {
     trie_iterator end() {return &head;}
 
     stupid_trie(){ 
-      head.value = std::make_tuple<key_type, T>("", std::nullopt); 
-      head.children = children_type(); 
+      head.value = std::make_pair<key_type, T>("", T()); 
+      head.children = children_container_type(); 
       head.parent = nullptr;
       }
 
@@ -101,7 +104,7 @@ class stupid_trie {
     int count(key_type _key) const{
       int counter = 0; //note: there should be no duplicate keys, this function should always return 0 or 1
       for (auto it = (*this).begin(); it != (*this).end(); ++it) { 
-        if (_key == std::get<0>(it->curr).first) { ++counter; }
+        if (_key == it->curr.value.first) { ++counter; }
       }
       return counter;
     }
@@ -112,7 +115,7 @@ class stupid_trie {
       return ret;
     }
 //TODO is_empty fnc, 0 == size
-    bool is_empty() const {return (0 == size())}
+    bool is_empty() const {return (0 == size());}
 /*TODO emplace fnc, return a pair, first is a (string, iterator(to the value)) pair, 2nd is a bool if it already existed
 also don't insert into const
 keep inserting by substring into the child element container, if there's a node already then skip that insert
@@ -126,7 +129,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
     T& at(const key_type&){
 
         //if unreachable
-        throw std::out_of_range;
+        throw std::out_of_range();
     }
 //TODO do we have to delete an element? maybe invalidate nodes which don't have a value? (aka optional values)
 };
