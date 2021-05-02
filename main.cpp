@@ -61,45 +61,45 @@ class stupid_trie {
     
     public:
 
-    //Type is either trie_node or const trie_node
-    template <typename Type>
-    class trie_iterator : public std::iterator<std::forward_iterator_tag, Type> {
+    //NODE_TYPE is either trie_node or const trie_node
+    template <typename NODE_TYPE>
+    class trie_iterator : public std::iterator<std::forward_iterator_tag, NODE_TYPE> {
         //note: iterator is deprecated from c++17??
       
-      Type* curr;
+      NODE_TYPE* curr;
 
       public:
-      explicit trie_iterator(Type* _elem) : curr(_elem) {}
+      explicit trie_iterator(NODE_TYPE* _elem) : curr(_elem) {}
         //iterate through the child elements, and recursively look for anything that has value, if none can be found, look into the parent too
-      trie_iterator<Type> operator++(int)
+      trie_iterator<NODE_TYPE> operator++(int)
       {
           auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid<Type*>(*it)))
+          while (it != curr->children.end() && (nullptr == first_valid<NODE_TYPE*>(*it)))
           {
             ++it;
           }
-          return (it == curr->children.end()) ? trie_iterator<Type>(backtrack<Type*>(curr)) : trie_iterator<Type>(*it);
+          return (it == curr->children.end()) ? trie_iterator<NODE_TYPE>(backtrack<NODE_TYPE*>(curr)) : trie_iterator<NODE_TYPE>(*it);
       }
 
-      trie_iterator<Type> operator++()
+      trie_iterator<NODE_TYPE> operator++()
       {
         auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid<Type*>(*it)))
+          while (it != curr->children.end() && (nullptr == first_valid<NODE_TYPE*>(*it)))
           {
             ++it;
           }
-          (it == curr->children.end()) ? curr = backtrack<Type*>(curr) : curr = *it;
+          (it == curr->children.end()) ? curr = backtrack<NODE_TYPE*>(curr) : curr = *it;
           return *this;
           
       }
 
       //TODO operator--
-      Type& operator=(const trie_iterator& other) {this->curr = other->curr; return (*this);}
-      bool operator==(const trie_iterator& other) const {return *curr == *(other.curr);}
+      trie_iterator& operator=(const trie_iterator& other) {this->curr = other->curr; return this;}
+      bool operator==(const trie_iterator& other) const {return curr == (other.curr);}
       bool operator!=(const trie_iterator& other) const {return !(*this == other);}
-      Type& operator*() const { return curr; }
-      Type * operator->() { return curr; }
-      Type const * operator->() const { return curr; }
+      NODE_TYPE& operator*() const { return curr; }
+      NODE_TYPE * operator->() { return curr; }
+      NODE_TYPE const * operator->() const { return curr; }
     };
 
     
@@ -115,29 +115,29 @@ class stupid_trie {
     }
 
     //returns the first valid element from the children set, if none can be found recursively, returns a nullptr
-    template<typename NODE_TYPE> //NODE_TYPE is either trie_node* or const trie_node*
-    NODE_TYPE first_valid(NODE_TYPE node) const{
-      if (node->value.second.has_value()){ return node; }
-      auto it = node->children.begin();
-      while (it != node->children.end() && (nullptr == first_valid(*it)) ){++it;}
-      return (node->children.end() == it) ? nullptr : *it;
+    template<typename NODE_TYPE_PTR> //NODE_TYPE_PTR is either trie_node* or const trie_node*
+    NODE_TYPE_PTR first_valid(NODE_TYPE_PTR nodeptr) const{
+      if (nodeptr->value.second.has_value()){ return nodeptr; }
+      auto it = nodeptr->children.begin();
+      while (it != nodeptr->children.end() && (nullptr == first_valid(*it)) ){++it;}
+      return (nodeptr->children.end() == it) ? nullptr : *it;
     }
     //end should be the head element
     iterator end() {return iterator(&head);}
     const_iterator end() const {return const_iterator(&head);}
 
     //called when there are no more valid children of the node to iterate on, must go a level higher to find next
-    template<typename NODE_TYPE> //NODE_TYPE is either trie_node* or const trie_node*
-    NODE_TYPE backtrack(NODE_TYPE curr_node) const{
-      if (nullptr == curr_node->parent) {return curr_node;} // its the root element, can't backtrack further, return it for end() comparison
-      auto continue_from = ++(curr_node->parent->children.find(curr_node->value.first));
-      while (continue_from!=curr_node->parent->children.end() && (nullptr == first_valid(continue_from)))
+    template<typename NODE_TYPE_PTR> //NODE_TYPE_PTR is either trie_node* or const trie_node*
+    NODE_TYPE_PTR backtrack(NODE_TYPE_PTR curr_node_ptr) const{
+      if (nullptr == curr_node_ptr->parent) {return curr_node_ptr;} // its the root element, can't backtrack further, return it for end() comparison
+      auto continue_from = ++(curr_node_ptr->parent->children.find(curr_node_ptr->value.first));
+      while (continue_from!=curr_node_ptr->parent->children.end() && (nullptr == first_valid(continue_from)))
       {
         ++continue_from;
       }
       //if the parent doesn't have any valid descendants, go another level higher
-      return (continue_from == curr_node->parent->children.end()) ? 
-      backtrack(curr_node->parent) : 
+      return (continue_from == curr_node_ptr->parent->children.end()) ? 
+      backtrack(curr_node_ptr->parent) : 
       continue_from;
     }
 
@@ -160,7 +160,7 @@ class stupid_trie {
 //TODO implement size fnc (count the values, not the keys) -also iterator?
     int size() const{
       int ret = 0;
-      for (auto it = (*this).begin(); it != (*this).end(); ++it) { ++ret; }
+      for (auto it = begin(); it != end(); ++it) { ++ret; }
       return ret;
     }
 //TODO is_empty fnc, 0 == size
@@ -173,7 +173,36 @@ but keep inserting on that node
 raise std::bad_optional_access if you try to insert an optional with no value
 
 */
-    std::pair<value_type, bool> emplace(key_type _key, T _val){}
+    std::pair<value_type, bool> emplace(const key_type _key, const mapped_type _val){
+      auto it = make_branch(_key);
+      it->value.second = _val;
+    }
+
+    std::pair<value_type, bool> emplace(const value_type pair){
+      auto it = make_branch(pair.first);
+      it->value.second = pair.second;
+    }
+
+    iterator make_branch(key_type _key) {
+      trie_node* curr = &head;
+      for (int i = 1; i <= _key.length(); ++i)
+      {
+        //TODO write custom find?
+        auto it = curr->children.begin();
+        while (it != curr->children.end() && it->value.first != _key.substr(0,i))
+        {
+          ++it;
+        }
+        if (it == curr->children.end()){ //TODO delete the new here
+          it = curr->children.emplace(new trie_node(std::make_pair<optional_value_type>(_key.substr(0,i), std::nullopt), curr, children_container_type()));
+        }
+        curr = it;
+      }
+      return iterator(curr);
+    }
+
+
+
 //TODO at FNC, throw out_of_range if its not there
     T& at(const key_type&){
 
