@@ -28,8 +28,9 @@ template <class T, class Compare = std::less<std::string>, class Allocator = std
 class stupid_trie {
     public:
     typedef std::string key_type;
-    typedef std::optional<T> mapped_type;
+    typedef T mapped_type;
     typedef std::pair<const key_type, mapped_type> value_type;
+    typedef std::pair<const key_type, std::optional<mapped_type> > optional_value_type;
     //typedef std::pair<const std::string, std::optional<T> > value_type;
     typedef Compare key_compare;
     typedef Allocator allocator_type;
@@ -44,13 +45,13 @@ class stupid_trie {
     typedef trie_iterator<const trie_node> const_iterator;
 
     struct trie_node{
-      value_type value;
+      optional_value_type value;
       trie_node* parent;
       children_container_type children;
 
       
-      trie_node() : value(value_type()), parent(nullptr), children(children_container_type()) {}
-
+      trie_node() : value(optional_value_type("", std::nullopt)), parent(nullptr), children(children_container_type()) {}
+      trie_node(optional_value_type _val, trie_node* _pptr, children_container_type _chld) : value(_val), parent(_pptr), children(_chld) {}
     };
 
     private:
@@ -75,7 +76,7 @@ class stupid_trie {
           {
             ++it;
           }
-          return (it == curr->children.end()) ? backtrack(curr) : *it;
+          return (it == curr->children.end()) ? trie_iterator<Type>(backtrack(curr)) : trie_iterator<Type>(*it);
       }
 
       trie_iterator<Type> operator++()
@@ -111,19 +112,19 @@ class stupid_trie {
       return (nullptr == ret) ? const_iterator(&head) : const_iterator(ret);
     }
 
-
+    //returns the first valid element from the children set, if none can be found recursively, returns a nullptr
     trie_node* first_valid(trie_node* node) const{
       if (node->value.second.has_value()){ return node; }
       auto it = node->children.begin();
-      while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
-      return (node->children.end() == it) ? nullptr : it;
+      while (it != node->children.end() && (nullptr == first_valid(*it)) ){++it;}
+      return (node->children.end() == it) ? nullptr : *it;
     }
 
     const trie_node* first_valid(const trie_node* node) const{
       if (node->value.second.has_value()){ return node; }
       auto it = node->children.begin();
-      while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
-      return (node->children.end() == it) ? nullptr : it;
+      while (it != node->children.end() && (nullptr == first_valid(*it)) ){++it;}
+      return (node->children.end() == it) ? nullptr : *it;
     }
     //end should be the head element
     iterator end() {return iterator(&head);}
@@ -131,7 +132,7 @@ class stupid_trie {
 
     //called when there are no more valid children of the node to iterate on, must go a level higher to find next
     trie_node* backtrack(trie_node* curr_node) const{
-      if (nullptr == curr_node->parent) {return this;} // its the root element, can't backtrack further, return this for end() comparison
+      if (nullptr == curr_node->parent) {return curr_node;} // its the root element, can't backtrack further, return it for end() comparison
       auto continue_from = ++(curr_node->parent->children.find(curr_node->value.first));
       while (continue_from!=curr_node->parent->children.end() && (nullptr == first_valid(continue_from)))
       {
@@ -143,7 +144,7 @@ class stupid_trie {
       continue_from;
     }
 
-    stupid_trie() = default; //TODO give a parent to the head element and make that end? if "" key has value it can break
+    stupid_trie() : head(trie_node()) {}; //TODO give a parent to the head element and make that end? if "" key has value it can break
 
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
@@ -166,7 +167,7 @@ class stupid_trie {
       return ret;
     }
 //TODO is_empty fnc, 0 == size
-    bool empty() const {return (0 == size());}
+    bool empty() const {return (begin() == end());}
 /*TODO emplace fnc, return a pair, first is a (string, iterator(to the value)) pair, 2nd is a bool if it already existed
 also don't insert into const
 keep inserting by substring into the child element container, if there's a node already then skip that insert
