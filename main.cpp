@@ -74,21 +74,21 @@ class stupid_trie {
       trie_iterator<Type> operator++(int)
       {
           auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid(*it)))
+          while (it != curr->children.end() && (nullptr == first_valid<Type*>(*it)))
           {
             ++it;
           }
-          return (it == curr->children.end()) ? trie_iterator<Type>(backtrack(curr)) : trie_iterator<Type>(*it);
+          return (it == curr->children.end()) ? trie_iterator<Type>(backtrack<Type*>(curr)) : trie_iterator<Type>(*it);
       }
 
       trie_iterator<Type> operator++()
       {
         auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid(*it)))
+          while (it != curr->children.end() && (nullptr == first_valid<Type*>(*it)))
           {
             ++it;
           }
-          (it == curr->children.end()) ? curr = backtrack(curr) : curr = *it;
+          (it == curr->children.end()) ? curr = backtrack<Type*>(curr) : curr = *it;
           return *this;
           
       }
@@ -106,23 +106,17 @@ class stupid_trie {
 
     //begin should be the first valid element found, if empty then the head element
     iterator begin() {
-      trie_node* ret = first_valid(&head);
+      trie_node* ret = first_valid<trie_node*>(&head);
       return (nullptr == ret) ? iterator(&head) : iterator(ret);
     }
     const_iterator begin() const {
-      const trie_node* ret = first_valid(&head);
+      const trie_node* ret = first_valid<const trie_node*>(&head);
       return (nullptr == ret) ? const_iterator(&head) : const_iterator(ret);
     }
 
     //returns the first valid element from the children set, if none can be found recursively, returns a nullptr
-    trie_node* first_valid(trie_node* node) const{
-      if (node->value.second.has_value()){ return node; }
-      auto it = node->children.begin();
-      while (it != node->children.end() && (nullptr == first_valid(*it)) ){++it;}
-      return (node->children.end() == it) ? nullptr : *it;
-    }
-
-    const trie_node* first_valid(const trie_node* node) const{
+    template<typename NODE_TYPE> //NODE_TYPE is either trie_node* or const trie_node*
+    NODE_TYPE first_valid(NODE_TYPE node) const{
       if (node->value.second.has_value()){ return node; }
       auto it = node->children.begin();
       while (it != node->children.end() && (nullptr == first_valid(*it)) ){++it;}
@@ -133,7 +127,8 @@ class stupid_trie {
     const_iterator end() const {return const_iterator(&head);}
 
     //called when there are no more valid children of the node to iterate on, must go a level higher to find next
-    trie_node* backtrack(trie_node* curr_node) const{
+    template<typename NODE_TYPE> //NODE_TYPE is either trie_node* or const trie_node*
+    NODE_TYPE backtrack(NODE_TYPE curr_node) const{
       if (nullptr == curr_node->parent) {return curr_node;} // its the root element, can't backtrack further, return it for end() comparison
       auto continue_from = ++(curr_node->parent->children.find(curr_node->value.first));
       while (continue_from!=curr_node->parent->children.end() && (nullptr == first_valid(continue_from)))
