@@ -28,7 +28,7 @@ template <class T, class Compare = std::less<std::string>, class Allocator = std
 class stupid_trie {
     public:
     typedef std::string key_type;
-    typedef T mapped_type;
+    typedef std::optional<T> mapped_type;
     typedef std::pair<const key_type, mapped_type> value_type;
     //typedef std::pair<const std::string, std::optional<T> > value_type;
     typedef Compare key_compare;
@@ -48,25 +48,13 @@ class stupid_trie {
       trie_node* parent;
       children_container_type children;
 
-      //called when there are no more valid children of the node to iterate on, must go a level higher to find next
-      trie_node* backtrack(const key_type* from_which_child, trie_node* parent_pointer) {
-        if (nullptr == parent_pointer) {return this;} // its the root element, can't backtrack further, return this for end() comparison
-        auto continue_from = ++(parent_pointer->children.find(from_which_child));
-        while (continue_from!=parent_pointer->children.end() && (nullptr == first_valid(continue_from)))
-        {
-          ++continue_from;
-        }
-        //if the parent doesn't have any valid descendants, go another level higher
-        return (continue_from == parent_pointer->children.end()) ? 
-        parent_pointer->backtrack(parent_pointer->value.first, parent_pointer->parent) : 
-        continue_from;
-      }
+      
       trie_node() : value(value_type()), parent(nullptr), children(children_container_type()) {}
 
     };
 
     private:
-    trie_node head;
+    trie_node head = trie_node();
     
     public:
 
@@ -80,31 +68,31 @@ class stupid_trie {
       public:
       explicit trie_iterator(Type* _elem) : curr(_elem) {}
         //iterate through the child elements, if their children aren't empty, recursively iterate through them?
-      Type* operator++(int)
+      trie_iterator<Type> operator++(int)
       {
-          //if (curr->children.is_empty()){ return (curr->parent)++;} //TODO continue iterating in the parent from this set element
           auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid(it)))
+          while (it != curr->children.end() && (nullptr == first_valid(*it)))
           {
             ++it;
           }
-          return (it == curr->children.end()) ? curr->backtrack(curr->value.first, curr->parent) : it; //TODO continue iterating in the parent from the current element
+          return (it == curr->children.end()) ? backtrack(curr) : *it;
       }
 
-      Type* operator++()
+      trie_iterator<Type> operator++()
       {
         auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == first_valid(it)))
+          while (it != curr->children.end() && (nullptr == first_valid(*it)))
           {
             ++it;
           }
-          (it == curr->children.end()) ? curr = curr->backtrack(curr->value.first, curr->parent) : curr = *it;
+          (it == curr->children.end()) ? curr = backtrack(curr) : curr = *it;
           return *this;
+          
       }
 
       //TODO operator--
       Type& operator=(const trie_iterator& other) {this->curr = other->curr; return (*this);}
-      bool operator==(const trie_iterator& other) const {return curr->value.first == other->curr->value.first;}
+      bool operator==(const trie_iterator& other) const {return curr == other.curr;}
       bool operator!=(const trie_iterator& other) const {return !(*this == other);}
       Type& operator*() const { return curr; }
       Type * operator->() { return curr; }
@@ -130,9 +118,30 @@ class stupid_trie {
       while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
       return (node->children.end() == it) ? nullptr : it;
     }
+
+    const trie_node* first_valid(const trie_node* node) const{
+      if (node->value.second.has_value()){ return node; }
+      auto it = node->children.begin();
+      while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
+      return (node->children.end() == it) ? nullptr : it;
+    }
     //end should be the head element
     iterator end() {return iterator(&head);}
     const_iterator end() const {return const_iterator(&head);}
+
+    //called when there are no more valid children of the node to iterate on, must go a level higher to find next
+    trie_node* backtrack(trie_node* curr_node) const{
+      if (nullptr == curr_node->parent) {return this;} // its the root element, can't backtrack further, return this for end() comparison
+      auto continue_from = ++(curr_node->parent->children.find(curr_node->value.first));
+      while (continue_from!=curr_node->parent->children.end() && (nullptr == first_valid(continue_from)))
+      {
+        ++continue_from;
+      }
+      //if the parent doesn't have any valid descendants, go another level higher
+      return (continue_from == curr_node->parent->children.end()) ? 
+      backtrack(curr_node->parent) : 
+      continue_from;
+    }
 
     stupid_trie() = default; //TODO give a parent to the head element and make that end? if "" key has value it can break
 
