@@ -146,6 +146,11 @@ class stupid_trie {
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
     //TODO operator[], return an optional
+    std::optional<mapped_type>& operator[](key_type _key) const{
+      trie_node* ret = traverse_branch(_key);
+      return (ret->value.second.has_value()) ? ret->value.second : std::nullopt;
+    }
+    
 
     ~stupid_trie() = default;
 
@@ -173,14 +178,24 @@ but keep inserting on that node
 raise std::bad_optional_access if you try to insert an optional with no value
 
 */
-    std::pair<value_type, bool> emplace(const key_type _key, const mapped_type _val){
+    std::pair<iterator, bool> emplace(const key_type _key, const std::optional<mapped_type> _val){
+      if (!(_val.has_value())) { throw std::bad_optional_access(); }
       auto it = make_branch(_key);
+      if (it->value.second.has_value()) {
+        return std::make_pair<iterator, bool>(it, false);
+      }
       it->value.second = _val;
+      return std::make_pair<iterator, bool>(it, true);
     }
 
-    std::pair<value_type, bool> emplace(const value_type pair){
+    std::pair<iterator, bool> emplace(const optional_value_type pair){
+      if (!(pair.second.has_value())) { throw std::bad_optional_access(); }
       auto it = make_branch(pair.first);
+      if (it->value.second.has_value()) {
+        return std::make_pair<iterator, bool>(it, false);
+      }
       it->value.second = pair.second;
+      return std::make_pair<iterator, bool>(it, true);
     }
 
     iterator make_branch(key_type _key) {
@@ -199,6 +214,23 @@ raise std::bad_optional_access if you try to insert an optional with no value
         curr = it;
       }
       return iterator(curr);
+    }
+
+    trie_node* traverse_branch(key_type _key) const{
+      trie_node* curr = &head;
+      for (int i = 1; i <= _key.length(); ++i)
+      {
+        auto it = curr->children.begin();
+        while (it != curr->children.end() && it->value.first != _key.substr(0,i))
+        {
+          ++it;
+        }
+        if (it == curr.children.end()){
+          return &head;
+        }
+        curr = it;
+      }
+      return curr;
     }
 
 
