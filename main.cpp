@@ -146,9 +146,9 @@ class stupid_trie {
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
     //TODO operator[], return an optional
-    std::optional<mapped_type>& operator[](key_type _key) const{
-      trie_node* ret = traverse_branch(_key);
-      return (ret->value.second.has_value()) ? ret->value.second : std::nullopt;
+    std::optional<mapped_type>& operator[](const key_type& _key) const{
+      trie_node* ret = make_branch(_key);
+      return ret->value.second;
     }
     
 
@@ -178,7 +178,7 @@ but keep inserting on that node
 raise std::bad_optional_access if you try to insert an optional with no value
 
 */
-    std::pair<iterator, bool> emplace(const key_type _key, const std::optional<mapped_type> _val){
+    std::pair<iterator, bool> emplace(const key_type& _key, const std::optional<mapped_type> _val){
       if (!(_val.has_value())) { throw std::bad_optional_access(); }
       auto it = make_branch(_key);
       if (it->value.second.has_value()) {
@@ -190,7 +190,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
 
     std::pair<iterator, bool> emplace(const optional_value_type pair){
       if (!(pair.second.has_value())) { throw std::bad_optional_access(); }
-      auto it = make_branch(pair.first);
+      auto it = make_branch(&(pair.first));
       if (it->value.second.has_value()) {
         return std::make_pair<iterator, bool>(it, false);
       }
@@ -198,7 +198,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
       return std::make_pair<iterator, bool>(it, true);
     }
 
-    iterator make_branch(key_type _key) {
+    iterator make_branch(key_type& _key) {
       trie_node* curr = &head;
       for (int i = 1; i <= _key.length(); ++i)
       {
@@ -216,7 +216,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
       return iterator(curr);
     }
 
-    trie_node* traverse_branch(key_type _key) const{
+    trie_node* traverse_branch(key_type& _key) const{
       trie_node* curr = &head;
       for (int i = 1; i <= _key.length(); ++i)
       {
@@ -236,10 +236,13 @@ raise std::bad_optional_access if you try to insert an optional with no value
 
 
 //TODO at FNC, throw out_of_range if its not there
-    T& at(const key_type&){
-
-        //if unreachable
-        throw std::out_of_range();
+    std::optional<mapped_type>& at(const key_type& _key){ //TODO HOW IS THIS ANY DIFFERENT THAN []
+        trie_node* ret = traverse_branch(_key);
+        if (ret == &head) //if unreachable
+        {
+          throw std::out_of_range();
+        }
+        return (ret->value.second.has_value()) ? ret->value.second : std::nullopt;
     }
 //TODO do we have to delete an element? maybe invalidate nodes which don't have a value? (aka optional values)
 };
