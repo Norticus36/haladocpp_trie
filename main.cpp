@@ -29,7 +29,7 @@ class stupid_trie {
     public:
     typedef std::string key_type;
     typedef T mapped_type;
-    typedef std::pair<const std::string, T> value_type;
+    typedef std::pair<const key_type, mapped_type> value_type;
     //typedef std::pair<const std::string, std::optional<T> > value_type;
     typedef Compare key_compare;
     typedef Allocator allocator_type;
@@ -37,10 +37,32 @@ class stupid_trie {
 
     typedef std::set<trie_node*, key_compare> children_container_type;
 
+    template<typename Type>
+    class trie_iterator;
+
+    typedef trie_iterator<trie_node> iterator;
+    typedef trie_iterator<const trie_node> const_iterator;
+
     struct trie_node{
       value_type value;
       trie_node* parent;
       children_container_type children;
+
+      //called when there are no more valid children of the node to iterate on, must go a level higher to find next
+      trie_node* backtrack(const key_type* from_which_child, trie_node* parent_pointer) {
+        if (nullptr == parent_pointer) {return this;} // its the root element, can't backtrack further, return this for end() comparison
+        auto continue_from = ++(parent_pointer->children.find(from_which_child));
+        while (continue_from!=parent_pointer->children.end() && (nullptr == first_valid(continue_from)))
+        {
+          ++continue_from;
+        }
+        //if the parent doesn't have any valid descendants, go another level higher
+        return (continue_from == parent_pointer->children.end()) ? 
+        parent_pointer->backtrack(parent_pointer->value.first, parent_pointer->parent) : 
+        continue_from;
+      }
+      trie_node() : value(value_type()), parent(nullptr), children(children_container_type()) {}
+
     };
 
     private:
@@ -48,47 +70,71 @@ class stupid_trie {
     
     public:
 
-    class trie_iterator : public std::iterator<std::bidirectional_iterator_tag, value_type> {
+    //Type is either trie_node or const trie_node
+    template <typename Type>
+    class trie_iterator : public std::iterator<std::forward_iterator_tag, Type> {
         //note: iterator is deprecated from c++17??
+      
+      Type* curr;
 
-      trie_node* curr;
       public:
-      explicit trie_iterator(trie_node* _elem) : curr(_elem) {}
+      explicit trie_iterator(Type* _elem) : curr(_elem) {}
         //iterate through the child elements, if their children aren't empty, recursively iterate through them?
-      trie_node* operator++()
+      Type* operator++(int)
       {
-          if (curr->children.is_empty()){ return (curr->parent)++;} //TODO continue iterating in the parent from this set element
+          //if (curr->children.is_empty()){ return (curr->parent)++;} //TODO continue iterating in the parent from this set element
           auto it = curr->children.begin();
           while (it != curr->children.end() && (nullptr == first_valid(it)))
           {
             ++it;
           }
-          return (it == curr->children.end()) ? (curr->parent)++ : it; //TODO continue iterating in the parent from the current element
+          return (it == curr->children.end()) ? curr->backtrack(curr->value.first, curr->parent) : it; //TODO continue iterating in the parent from the current element
+      }
+
+      Type* operator++()
+      {
+        auto it = curr->children.begin();
+          while (it != curr->children.end() && (nullptr == first_valid(it)))
+          {
+            ++it;
+          }
+          (it == curr->children.end()) ? curr = curr->backtrack(curr->value.first, curr->parent) : curr = *it;
+          return *this;
       }
 
       //TODO operator--
-      bool operator==(trie_iterator other) const {return curr->value.first == other->curr->value.first;}
-      bool operator!=(trie_iterator other) const {return !(*this == other);}
+      Type& operator=(const trie_iterator& other) {this->curr = other->curr; return (*this);}
+      bool operator==(const trie_iterator& other) const {return curr->value.first == other->curr->value.first;}
+      bool operator!=(const trie_iterator& other) const {return !(*this == other);}
+      Type& operator*() const { return curr; }
+      Type * operator->() { return curr; }
+      Type const * operator->() const { return curr; }
     };
 
+    
+
     //begin should be the first valid element found, if empty then the head element
-    trie_iterator begin() {
-      if (head.children.is_empty() ) {return &head;}
+    iterator begin() {
       trie_node* ret = first_valid(&head);
-      return (nullptr == ret) ? &head : ret;
+      return (nullptr == ret) ? iterator(&head) : iterator(ret);
     }
-    trie_node* first_valid(trie_node* node) {
-      if (node->children.is_empty()){
-        return (node->value.second.has_value()) ? node : nullptr;
-      }
+    const_iterator begin() const {
+      const trie_node* ret = first_valid(&head);
+      return (nullptr == ret) ? const_iterator(&head) : const_iterator(ret);
+    }
+
+
+    trie_node* first_valid(trie_node* node) const{
+      if (node->value.second.has_value()){ return node; }
       auto it = node->children.begin();
       while (it != node->children.end() && (nullptr == first_valid(it)) ){++it;}
       return (node->children.end() == it) ? nullptr : it;
     }
     //end should be the head element
-    trie_iterator end() {return &head;}
+    iterator end() {return iterator(&head);}
+    const_iterator end() const {return const_iterator(&head);}
 
-    stupid_trie() = default;
+    stupid_trie() = default; //TODO give a parent to the head element and make that end? if "" key has value it can break
 
     //TODO operator =, should work on const too, should only work if the type is copyable, otherwise std::move
 
@@ -100,7 +146,7 @@ class stupid_trie {
     int count(key_type _key) const{
       int counter = 0; //note: there should be no duplicate keys, this function should always return 0 or 1
       for (auto it = (*this).begin(); it != (*this).end(); ++it) { 
-        if (_key == it->curr.value.first) { ++counter; }
+        if (_key == (it->value).first) { ++counter; }
       }
       return counter;
     }
@@ -166,7 +212,7 @@ x
                                std::pair<const std::string, int>>);
   
   assert(STI.empty() && STI.size() == 0 && STI.count("whispy") == 0);
-  STI.count(static_cast<void*>(0)); // !!! Should not compile.
+  //STI.count(static_cast<void*>(0)); // !!! Should not compile.
   /*
   const decltype(STI)& cSTI = STI;
   // Callable on const.
