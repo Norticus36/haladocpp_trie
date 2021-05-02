@@ -52,6 +52,8 @@ class stupid_trie {
       
       trie_node() : value(optional_value_type("", std::nullopt)), parent(nullptr), children(children_container_type()) {}
       trie_node(optional_value_type _val, trie_node* _pptr, children_container_type _chld) : value(_val), parent(_pptr), children(_chld) {}
+
+      bool operator==(const trie_node& other) const {return (value == other.value && parent == other.parent && children == other.children) ? true : false;}
     };
 
     private:
@@ -68,7 +70,7 @@ class stupid_trie {
 
       public:
       explicit trie_iterator(Type* _elem) : curr(_elem) {}
-        //iterate through the child elements, if their children aren't empty, recursively iterate through them?
+        //iterate through the child elements, and recursively look for anything that has value, if none can be found, look into the parent too
       trie_iterator<Type> operator++(int)
       {
           auto it = curr->children.begin();
@@ -93,7 +95,7 @@ class stupid_trie {
 
       //TODO operator--
       Type& operator=(const trie_iterator& other) {this->curr = other->curr; return (*this);}
-      bool operator==(const trie_iterator& other) const {return curr == other.curr;}
+      bool operator==(const trie_iterator& other) const {return *curr == *(other.curr);}
       bool operator!=(const trie_iterator& other) const {return !(*this == other);}
       Type& operator*() const { return curr; }
       Type * operator->() { return curr; }
