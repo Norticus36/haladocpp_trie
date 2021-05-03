@@ -181,6 +181,15 @@ class stupid_trie {
       return ret->value.second;
     }
     
+    stupid_trie& operator=(const stupid_trie& other)
+    {
+      head = *(other.end()); //end always returns the head element
+      for (auto it = other.begin(); it!= other.end; ++it)
+      {
+        this.emplace((*it)->value);
+      }
+      return *this;
+    }
 
     ~stupid_trie() = default;
 
@@ -208,7 +217,7 @@ but keep inserting on that node
 raise std::bad_optional_access if you try to insert an optional with no value
 
 */
-    std::pair<iterator, bool> emplace(const key_type& _key, const std::optional<mapped_type> _val){
+    std::pair<iterator, bool> emplace(const key_type& _key, const std::optional<mapped_type>& _val){
       if (!(_val.has_value())) { throw std::bad_optional_access(); }
       auto it = make_branch(_key);
       if (it->value.second.has_value()) {
@@ -218,7 +227,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
       return std::pair<iterator, bool>(it, true);
     }
 
-    std::pair<iterator, bool> emplace(const optional_value_type pair){
+    std::pair<iterator, bool> emplace(const optional_value_type& pair){
       if (!(pair.second.has_value())) { throw std::bad_optional_access(); }
       auto it = make_branch(&(pair.first));
       if (it->value.second.has_value()) {
@@ -239,14 +248,49 @@ raise std::bad_optional_access if you try to insert an optional with no value
           ++it;
         }
         if (it == curr->children.end()){ //TODO delete the new here
-          it = curr->children.emplace(new trie_node(std::pair<const key_type, std::optional<mapped_type> >(_key.substr(0,i), std::optional<mapped_type>()), curr, children_container_type()));
+          auto resp = curr->children.insert(new trie_node(std::pair<const key_type, std::optional<mapped_type> >(_key.substr(0,i), std::optional<mapped_type>()), curr, children_container_type()));
+          it = resp.first; //TODO we don't even need to check for end? insert returns the element if already there
         }
         curr = *it;
       }
       return iterator(curr);
     }
 
-    trie_node* traverse_branch(const key_type& _key) const{
+    trie_node* traverse_branch(const key_type& _key){
+      trie_node* curr = &head;
+      for (int i = 1; i <= _key.length(); ++i)
+      {
+        auto it = curr->children.begin();
+        while (it != curr->children.end() && (*it)->value.first != _key.substr(0,i))
+        {
+          ++it;
+        }
+        if (it == curr->children.end()){
+          return &head;
+        }
+        curr = *it;
+      }
+      return curr;
+    }
+
+    const trie_node* traverse_branch(const key_type& _key) const{
+      const trie_node* curr = &head;
+      for (int i = 1; i <= _key.length(); ++i)
+      {
+        auto it = curr->children.begin();
+        while (it != curr->children.end() && (*it)->value.first != _key.substr(0,i))
+        {
+          ++it;
+        }
+        if (it == curr->children.end()){
+          return &head;
+        }
+        curr = *it;
+      }
+      return curr;
+    }
+
+    const trie_node* traverse_branch(key_type& _key) const{
       trie_node* curr = &head;
       for (int i = 1; i <= _key.length(); ++i)
       {
@@ -266,11 +310,20 @@ raise std::bad_optional_access if you try to insert an optional with no value
 
 
 //TODO at FNC, throw out_of_range if its not there
-    std::optional<mapped_type>& at(const key_type& _key) const { //TODO HOW IS THIS ANY DIFFERENT THAN []
+    std::optional<mapped_type>& at(const key_type& _key) { //TODO HOW IS THIS ANY DIFFERENT THAN []
         trie_node* ret = traverse_branch(_key);
         if (ret == &head) //if unreachable
         {
-          throw std::out_of_range();
+          throw std::out_of_range("The element you're trying to access does not exist.");
+        }
+        return ret->value.second;
+    }
+
+    const std::optional<mapped_type>& at(const key_type& _key) const{ //TODO HOW IS THIS ANY DIFFERENT THAN []
+        const trie_node* ret = traverse_branch(_key);
+        if (ret == &head) //if unreachable
+        {
+          throw std::out_of_range("The element you're trying to access does not exist.");
         }
         return ret->value.second;
     }
@@ -314,7 +367,7 @@ x
   
   assert(STI.empty() && STI.size() == 0 && STI.count("whispy") == 0);
   //STI.count(static_cast<void*>(0)); // !!! Should not compile.
-  /*
+  
   const decltype(STI)& cSTI = STI;
   // Callable on const.
   assert(STI.empty() && cSTI.size() == 0 && cSTI.count("whispy") == 0);
@@ -327,21 +380,29 @@ x
   assert(!cSTI.empty() && cSTI.size() == 3);
   assert(cSTI.count("gsd") == 1 && cSTI.count("whispy") == 1 &&
          cSTI.count("xazax") == 1);
-
+  /*
   assert(InsertGSD.first->first == "gsd" && InsertGSD.first->second == 42 &&
          InsertGSD.second == true);
   assert(InsertWhispy.first->first == "whispy" &&
          InsertWhispy.first->second == 69 && InsertWhispy.second == true);
   assert(InsertXazax.first->first == "xazax" &&
          InsertXazax.first->second == 1337 && InsertXazax.second == true);
+  */
+  // since the iterator returns a node, we have to access the value to get the pair we are looking for
+  /*assert(InsertGSD.first->value.first == "gsd" && InsertGSD.first->value.second == 42 &&
+         InsertGSD.second == true);/*
+  assert(InsertWhispy.first->value.first == "whispy" &&
+         InsertWhispy.first->value.second == 69 && InsertWhispy.second == true);
+  assert(InsertXazax.first->value.first == "xazax" &&
+         InsertXazax.first->value.second == 1337 && InsertXazax.second == true);
 
   auto InsertGSDAgain = STI.emplace("gsd", 43);
   // Insertion does not happen, gsd is already inserted, return iterator to
   // already existing element.
-  assert(InsertGSDAgain.second == false && InsertGSDAgain.first->second == 42);
-
-  cSTI.emplace("inserting into const should not happen", -1); // !!! Should not compile.
-
+  assert(InsertGSDAgain.second == false && InsertGSDAgain.first->value.second == 42);
+  
+  //cSTI.emplace("inserting into const should not happen", -1); // !!! Should not compile.
+  /*
   try {
     STI.at("foo");
     assert(false && "Should have been unreachable.");
@@ -353,7 +414,7 @@ x
     assert(false && "Should have been unreachable.");
   } catch (std::out_of_range) {
   }
-
+/*
   // This is where we diverge from the std::map interface a little bit.
   // operator[] will not return a default constructed T like it does for map,
   // but instead an optional!
