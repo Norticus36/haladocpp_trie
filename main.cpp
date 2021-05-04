@@ -203,6 +203,11 @@ class stupid_trie {
       auto ret = make_branch(_key);
       return ret->value.second;
     }
+
+    const std::optional<mapped_type>& operator[](const key_type& _key) const { //TODO const???
+      auto ret = traverse_branch(_key);
+      return ret->value.second;
+    }
     
     //TODO make this const? and make regular version with emplace??
     stupid_trie& operator=(const stupid_trie& other)
@@ -314,7 +319,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
       }
       return curr;
     }
-
+    
     const trie_node* traverse_branch(key_type& _key) const{
       trie_node* curr = &head;
       for (int i = 1; i <= _key.length(); ++i)
@@ -327,7 +332,7 @@ raise std::bad_optional_access if you try to insert an optional with no value
         if (it == curr.children.end()){
           return &head;
         }
-        curr = it;
+        curr = *it;
       }
       return curr;
     }
@@ -450,7 +455,7 @@ x
   const auto MaybeElementOnConst = cSTI["abel"];
   static_assert(std::is_same_v<decltype(MaybeElementOnConst),
                                const optional<int>>);
-  /*
+  
   assert(MaybeElement.has_value() && MaybeElement.value() == 42);
   assert(!MaybeElementOnConst.has_value() &&
          MaybeElementOnConst.value_or(-1) == -1);
@@ -461,12 +466,14 @@ x
   }
 
   assert(cSTI.count("This Element Does Not Exist") == 0);
-
+  
   // The elements should be iterated in the natural order of the keys, in this
   // case, lexicographical.
   std::ostringstream OS;
-  for (const decltype(STI)::value_type& Elem : STI) {
-    OS << '(' << Elem.first << "->" << Elem.second << "),";
+  //for (const decltype(STI)::value_type& Elem : STI) {   NOTE: the iterator returns a trie_node, not the value!!!
+  for (const decltype(STI)::trie_node& Elem : STI) {
+    //OS << '(' << Elem.first << "->" << Elem.second << "),"; NOTE: the elem will have a value member with the value_type type
+    OS << '(' << Elem.value.first << "->" << Elem.value.second.value() << "),"; //NOTE the second contains an optional, but that's guaranteed to have a value because of the iterator
   }
   std::string Result = OS.str();
   Result.pop_back();
@@ -481,14 +488,16 @@ x
   STI.emplace("gs", -24);
 
   OS.str("");
-  for (const decltype(STI)::value_type& Elem : STI) {
-    OS << '(' << Elem.first << "->" << Elem.second << "),";
+  //for (const decltype(STI)::value_type& Elem : STI) {   NOTE: the iterator returns a trie_node, not the value!!!
+  for (const decltype(STI)::trie_node& Elem : STI) {
+    //OS << '(' << Elem.first << "->" << Elem.second << "),"; NOTE: the elem will have a value member with the value_type type
+    OS << '(' << Elem.value.first << "->" << Elem.value.second.value() << "),"; //NOTE the second contains an optional, but that's guaranteed to have a value because of the iterator
   }
   Result = OS.str();
   Result.pop_back();
   Expected = "(abel->16),(gs->-24),(gsd->43),(whispy->69),(xazax->1337)";
   assert(Result == Expected);
-  */
+  
   return 1;
 }
 
