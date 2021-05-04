@@ -77,28 +77,41 @@ class stupid_trie {
     //called when there are no more valid children of the node to iterate on, must go a level higher to find next
     trie_node* backtrack() {
       if (nullptr == (this)->parent) {return (this);} // its the root element, can't backtrack further, return it for end() comparison
-      auto continue_from = ++((this)->parent->children.find(this));
-      while (continue_from!=(this)->parent->children.end() && (nullptr == (*continue_from)->first_valid()))
+      auto continue_from = parent->children.begin();
+      while (continue_from != parent->children.end() && (*continue_from)->value.first != value.first)
+      {
+        ++continue_from;
+      }
+      
+      if (continue_from != parent->children.end()) {++continue_from;} //shouldn't happen though
+      while (continue_from != parent->children.end() && (nullptr == (*continue_from)->first_valid()))
       {
         ++continue_from;
       }
       //if the parent doesn't have any valid descendants, go another level higher
       return (continue_from == (this)->parent->children.end()) ? 
-      ((this)->parent)->backtrack() : 
+      (parent->backtrack()) : 
       *continue_from;
     }
     
     
     const trie_node* backtrack() const{
       if (nullptr == (this)->parent) {return (this);} // its the root element, can't backtrack further, return it for end() comparison
-      auto continue_from = ++((this)->parent->children.find(this));
-      while (continue_from!=(this)->parent->children.end() && (nullptr == (*continue_from)->first_valid()))
+      //auto continue_from = std::find((this)->parent->children.cbegin(), (this)->parent->children.cend(), this);
+      auto continue_from = parent->children.cbegin();
+      while (continue_from != parent->children.cend() && (*continue_from)->value.first != value.first)
+      {
+        ++continue_from;
+      }
+      
+      if (continue_from != parent->children.cend()) {++continue_from;} //shouldn't happen though
+      while (continue_from != parent->children.cend() && (nullptr == (*continue_from)->first_valid()))
       {
         ++continue_from;
       }
       //if the parent doesn't have any valid descendants, go another level higher
-      return (continue_from == (this)->parent->children.end()) ? 
-      ((this)->parent)->backtrack() : 
+      return (continue_from == (this)->parent->children.cend()) ? 
+      (parent->backtrack()) : 
       *continue_from;
     }
     
@@ -123,11 +136,11 @@ class stupid_trie {
       {
           iterator tmp = *this;
           auto it = curr->children.begin();
-          while (it != curr->children.end() && (nullptr == it->first_valid()))
+          while (it != curr->children.end() && (nullptr == (*it)->first_valid()))
           {
             ++it;
           }
-          (it == curr->children.end()) ? curr = it->backtrack() : curr = *it;
+          (it == curr->children.end()) ? curr = curr->backtrack() : curr = *it;
           return tmp;
       }
 
@@ -138,7 +151,7 @@ class stupid_trie {
           {
             ++it;
           }
-          (it == curr->children.end()) ? curr = (*it)->backtrack() : curr = *it;
+          (it == curr->children.end()) ? curr = curr->backtrack() : curr = *it;
           return *this;
           
       }
@@ -181,13 +194,15 @@ class stupid_trie {
       return ret->value.second;
     }
     
+    //TODO make this const? and make regular version with emplace??
     stupid_trie& operator=(const stupid_trie& other)
     {
-      head = *(other.end()); //end always returns the head element
-      for (auto it = other.begin(); it!= other.end; ++it)
+      head.parent = (*(other.end()))->parent;
+      head.children = (*(other.end()))->children; // TODO IT WILL LOOP BACK TO THE OTHER ELEMENT'S HEAD??? make it a pointer?
+      /*for (auto it = other.begin(); it!= other.end; ++it)
       {
         this.emplace((*it)->value);
-      }
+      }*/
       return *this;
     }
 
