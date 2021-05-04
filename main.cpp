@@ -63,15 +63,25 @@ class stupid_trie {
       trie_node* first_valid() {
         if ((this)->value.second.has_value()){ return (this); }
         auto it = (this)->children.begin();
-        while (it != (this)->children.end() && (nullptr == (*it)->first_valid()) ){++it;}
-        return ((this)->children.end() == it) ? nullptr : *it;
+        while (it != (this)->children.end() ){
+          auto valid_element_pointer = (*it)->first_valid();
+          if (nullptr != valid_element_pointer)
+          {return valid_element_pointer;}
+          ++it;
+          }
+        return nullptr;
     }
       
       const trie_node* first_valid() const{
         if ((this)->value.second.has_value()){ return (this); }
         auto it = (this)->children.begin();
-        while (it != (this)->children.end() && (nullptr == (*it)->first_valid()) ){++it;}
-        return ((this)->children.end() == it) ? nullptr : *it;
+        while (it != (this)->children.end() ){
+          auto valid_element_pointer = (*it)->first_valid();
+          if (nullptr != valid_element_pointer)
+          {return valid_element_pointer;}
+          ++it;
+          }
+        return nullptr;
     }
 
     //called when there are no more valid children of the node to iterate on, must go a level higher to find next
@@ -83,15 +93,15 @@ class stupid_trie {
         ++continue_from;
       }
       
-      if (continue_from != parent->children.end()) {++continue_from;} //shouldn't happen though
-      while (continue_from != parent->children.end() && (nullptr == (*continue_from)->first_valid()))
+      if (continue_from != parent->children.end()) {++continue_from;} //should always be true though
+      while (continue_from != parent->children.end())
       {
+        auto valid_element_pointer = (*continue_from)->first_valid();
+        if (nullptr != valid_element_pointer) {return valid_element_pointer;}
         ++continue_from;
       }
       //if the parent doesn't have any valid descendants, go another level higher
-      return (continue_from == (this)->parent->children.end()) ? 
-      (parent->backtrack()) : 
-      *continue_from;
+      return parent->backtrack();
     }
     
     
@@ -104,15 +114,15 @@ class stupid_trie {
         ++continue_from;
       }
       
-      if (continue_from != parent->children.cend()) {++continue_from;} //shouldn't happen though
-      while (continue_from != parent->children.cend() && (nullptr == (*continue_from)->first_valid()))
+      if (continue_from != parent->children.cend()) {++continue_from;} //should always be true though
+      while (continue_from != parent->children.end())
       {
+        auto valid_element_pointer = (*continue_from)->first_valid();
+        if (nullptr != valid_element_pointer) {return valid_element_pointer;}
         ++continue_from;
       }
       //if the parent doesn't have any valid descendants, go another level higher
-      return (continue_from == (this)->parent->children.cend()) ? 
-      (parent->backtrack()) : 
-      *continue_from;
+      return parent->backtrack();
     }
     
     };
@@ -395,8 +405,8 @@ x
   assert(!cSTI.empty() && cSTI.size() == 3);
   assert(cSTI.count("gsd") == 1 && cSTI.count("whispy") == 1 &&
          cSTI.count("xazax") == 1);
-  /*
-  assert(InsertGSD.first->first == "gsd" && InsertGSD.first->second == 42 &&
+  
+  /*assert(InsertGSD.first->first == "gsd" && InsertGSD.first->second == 42 &&
          InsertGSD.second == true);
   assert(InsertWhispy.first->first == "whispy" &&
          InsertWhispy.first->second == 69 && InsertWhispy.second == true);
@@ -404,8 +414,8 @@ x
          InsertXazax.first->second == 1337 && InsertXazax.second == true);
   */
   // since the iterator returns a node, we have to access the value to get the pair we are looking for
-  /*assert(InsertGSD.first->value.first == "gsd" && InsertGSD.first->value.second == 42 &&
-         InsertGSD.second == true);/*
+  assert(InsertGSD.first->value.first == "gsd" && InsertGSD.first->value.second == 42 &&
+         InsertGSD.second == true);
   assert(InsertWhispy.first->value.first == "whispy" &&
          InsertWhispy.first->value.second == 69 && InsertWhispy.second == true);
   assert(InsertXazax.first->value.first == "xazax" &&
@@ -417,7 +427,7 @@ x
   assert(InsertGSDAgain.second == false && InsertGSDAgain.first->value.second == 42);
   
   //cSTI.emplace("inserting into const should not happen", -1); // !!! Should not compile.
-  /*
+  
   try {
     STI.at("foo");
     assert(false && "Should have been unreachable.");
@@ -429,7 +439,7 @@ x
     assert(false && "Should have been unreachable.");
   } catch (std::out_of_range) {
   }
-/*
+
   // This is where we diverge from the std::map interface a little bit.
   // operator[] will not return a default constructed T like it does for map,
   // but instead an optional!
@@ -440,7 +450,7 @@ x
   const auto MaybeElementOnConst = cSTI["abel"];
   static_assert(std::is_same_v<decltype(MaybeElementOnConst),
                                const optional<int>>);
-
+  /*
   assert(MaybeElement.has_value() && MaybeElement.value() == 42);
   assert(!MaybeElementOnConst.has_value() &&
          MaybeElementOnConst.value_or(-1) == -1);
